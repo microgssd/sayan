@@ -1,6 +1,7 @@
 import './globals.css';
 import localFont from 'next/font/local';
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/react';
 import { Providers } from '@/components/providers';
 import { getRates } from '@/lib/rates';
 import { getLang } from '@/lib/i18n/server';
@@ -50,6 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {children}
           </Providers>
         </I18nProvider>
+        <Analytics />
       </body>
     </html>
   );

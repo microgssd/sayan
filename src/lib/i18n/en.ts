@@ -71,9 +71,6 @@ export const en = {
     myTimeIn: 'My time in {place}',
     online: 'Online now',
     away: 'Replying in the morning',
-    same: 'We share a time zone.',
-    ahead: 'I’m {gap} ahead of you.',
-    behind: 'I’m {gap} behind you.',
   },
   chat: {
     open: 'Chat with {name}',

@@ -6,16 +6,6 @@ import { useEffect, useState } from 'react';
 import type { Geo } from '@/lib/geo';
 import { useI18n } from '../i18n';
 
-/** Minutes east of UTC for a time zone at a given moment (handles DST). */
-function offsetMinutes(tz: string, date: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(date);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
-  return Math.round((asUtc - date.getTime()) / 60000);
-}
-
 const cityFromTz = (tz: string) => tz.split('/').pop()?.replace(/_/g, ' ') ?? tz;
 const countryName = (code: string, locale = 'en') => {
   try {
@@ -24,14 +14,6 @@ const countryName = (code: string, locale = 'en') => {
     return code;
   }
 };
-const describeGap = (mins: number, t: { same: string; ahead: string; behind: string }, fill: (s: string, v: Record<string, string>) => string) => {
-  if (mins === 0) return t.same;
-  const h = Math.floor(Math.abs(mins) / 60);
-  const m = Math.abs(mins) % 60;
-  const span = `${h ? `${h}h` : ''}${h && m ? ' ' : ''}${m ? `${m}m` : ''}`;
-  return fill(mins > 0 ? t.ahead : t.behind, { gap: span });
-};
-
 /** Ticking clock where each digit rolls when it changes. */
 function RollingTime({ date, tz, locale }: { date: Date; tz: string; locale: string }) {
   const t = new Intl.DateTimeFormat(locale, { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(date);
@@ -106,7 +88,6 @@ export function LocalTime({ myTz, myPlace }: { myTz: string; myPlace: string }) 
             {online ? t.time.online : t.time.away}
           </p>
         </div>
-        <p className="mt-2 text-sm text-muted">{now ? describeGap(offsetMinutes(myTz, now) - offsetMinutes(tz, now), t.time, fmt) : '\u00A0'}</p>
       </div>
     </div>
   );

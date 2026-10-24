@@ -14,6 +14,14 @@ const jakarta = localFont({
   display: 'swap',
 });
 
+// Bricolage Grotesque, used only for your name in the opening animation.
+const bricolage = localFont({
+  src: '../../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-standard-normal.woff2',
+  variable: '--font-name',
+  weight: '200 800',
+  display: 'swap',
+});
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
@@ -35,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { rates, updatedAt, live } = await getRates();
   const lang = getLang();
   return (
-    <html lang={lang} suppressHydrationWarning className={jakarta.variable}>
+    <html lang={lang} suppressHydrationWarning className={`${jakarta.variable} ${bricolage.variable}`}>
       <body>
         <I18nProvider lang={lang}>
           <Providers rates={rates} ratesUpdatedAt={updatedAt} ratesLive={live}>

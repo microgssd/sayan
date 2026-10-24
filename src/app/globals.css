@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Brand palette
+  Dark:  #0B0B14 · #1A1A2E · #F1F5F9 · #A855F7 · #C084FC
+  Light: #F8FAFC · #123B70 navy · #2563EB blue · #334155 slate
+  Derived tokens (surface, line, muted, pending) are tints of these colours.
+*/
+:root {
+  --bg: 248 250 252;          /* #F8FAFC */
+  --surface: 255 255 255;
+  --surface-2: 238 242 247;
+  --heading: 18 59 112;       /* #123B70 */
+  --ink: 51 65 85;            /* #334155 */
+  --muted: 92 105 124;        /* #334155 softened, 4.9:1 on bg */
+  --subtle: 100 116 139;      /* #64748B */
+  --line: 220 227 235;
+  --accent: 37 99 235;        /* #2563EB */
+  --accent-fg: 37 99 235;
+  --accent-ink: 255 255 255;
+  --brass: 180 83 9;          /* pending / owed (amber, AA on white) */
+  --danger: 190 48 48;
+  color-scheme: light;
+}
+
+.dark {
+  /* Background #0B0B14 · Surface #1A1A2E · Text #F1F5F9 · Accent #A855F7 · Secondary #C084FC */
+  --bg: 11 11 20;             /* #0B0B14 */
+  --surface: 26 26 46;        /* #1A1A2E */
+  --surface-2: 36 36 62;
+  --heading: 241 245 249;     /* #F1F5F9 */
+  --ink: 241 245 249;         /* #F1F5F9 */
+  --muted: 172 175 186;       /* text at 70% over background, 8.9:1 */
+  --subtle: 110 108 140;      /* decoration only */
+  --line: 44 44 72;
+  --accent: 168 85 247;       /* #A855F7, fills: buttons, bars, glows */
+  --accent-fg: 192 132 252;   /* #C084FC, accent text: 6.5:1 on surface */
+  --accent-ink: 11 11 20;     /* text on accent fills, 4.9:1 */
+  --brass: 251 191 36;
+  --danger: 248 113 113;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-bg font-sans text-ink;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: rgb(var(--heading));
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .bg-dots {
+    background-image: radial-gradient(rgb(var(--ink) / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .mask-fade-x {
+    mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  }
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Theme reveal (see theme-toggle.tsx) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  :root,
+  .dark {
+    --bg: 255 255 255;
+    --surface: 255 255 255;
+    --surface-2: 240 240 240;
+    --ink: 0 0 0;
+    --muted: 70 70 70;
+    --line: 210 210 210;
+  }
+}
+
+/* Intro overlay is skipped (before first paint) for returning visitors */
+.intro-seen [data-intro] {
+  display: none !important;
+}
+@media (pointer: coarse) {
+  [data-cursor-follower] {
+    display: none;
+  }
+}
+
+/* Project gallery: two rows drifting in opposite directions (see components/site/gallery.tsx) */
+@keyframes gallery-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 0.5rem)); }
+}
+@keyframes gallery-right {
+  from { transform: translateX(calc(-50% - 0.5rem)); }
+  to { transform: translateX(0); }
+}
+@media (min-width: 640px) {
+  @keyframes gallery-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - 0.625rem)); }
+  }
+  @keyframes gallery-right {
+    from { transform: translateX(calc(-50% - 0.625rem)); }
+    to { transform: translateX(0); }
+  }
+}

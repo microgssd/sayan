@@ -73,9 +73,6 @@ export const es: Dict = {
     myTimeIn: 'Mi hora en {place}',
     online: 'En línea',
     away: 'Respondo por la mañana',
-    same: 'Compartimos zona horaria.',
-    ahead: 'Voy {gap} por delante de usted.',
-    behind: 'Voy {gap} por detrás de usted.',
   },
   chat: {
     open: 'Chatear con {name}',

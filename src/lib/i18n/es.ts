@@ -18,6 +18,7 @@ export const es: Dict = {
   },
   numbers: { title: 'En cifras', years: 'años creando productos', projects: 'proyectos entregados', clients: 'clientes satisfechos' },
   work: {
+    swipe: 'Deslice hacia arriba para ver el siguiente proyecto',
     title: 'Proyectos destacados',
     countOne: '1 producto creado de principio a fin y en producción.',
     countMany: '{n} productos creados de principio a fin y en producción.',

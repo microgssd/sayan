@@ -94,7 +94,7 @@ export function Hero({
                 const n = Number(slot[1]);
                 return (
                   <Fragment key={ti}>
-                    <ProjectPill art={(isKawaii(settings.heroPills?.[n - 1]) ? settings.heroPills[n - 1] : (['rocket', 'bag', 'robot'] as const)[(n - 1) % 3]) as KawaiiName} entered={entered} label={projects[n - 1] ? fmt(t.hero.seeProject, { name: projects[n - 1]!.name }) : ''} project={projects[n - 1]} n={n} done={done} delay={0.5 + n * 0.12} onJump={(id) => { const c = caseTarget(id); lenis?.scrollTo(c.selector, { offset: c.offset, duration: 1.4 }); }} />{' '}
+                    <ProjectPill art={(isKawaii(settings.heroPills?.[n - 1]) ? settings.heroPills[n - 1] : (['rocket', 'bag', 'robot'] as const)[(n - 1) % 3]) as KawaiiName} entered={entered} label={projects[n - 1] ? fmt(t.hero.seeProject, { name: projects[n - 1]!.name }) : ''} project={projects[n - 1]} n={n} done={done} delay={0.5 + n * 0.12} onJump={(id) => { const c = caseTarget(id); lenis?.scrollTo(c.selector, { offset: c.offset, duration: 1.4 }); c.after?.(); }} />{' '}
                   </Fragment>
                 );
               }

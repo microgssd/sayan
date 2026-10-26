@@ -174,3 +174,8 @@ html.lenis body {
 @media (prefers-reduced-motion: reduce) {
   [class*='kw-'] { animation: none !important; }
 }
+
+/* Phones: the page snaps gently to each project reel (only near reels; elsewhere it scrolls freely) */
+@media (max-width: 767px) {
+  html { scroll-snap-type: y proximity; }
+}

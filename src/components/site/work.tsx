@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { motion, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowUpRight, ChevronUp, Github, Quote } from 'lucide-react';
+import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import { ArrowUpRight, Eye, Github, Quote } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useLenis } from 'lenis/react';
 import type { PublicProject } from '@/lib/types';
 import { useI18n } from '../i18n';
 import { useLocalizedProjects } from '../use-localized';
@@ -13,12 +12,20 @@ import { cn, initials } from '@/lib/utils';
 const ease = [0.22, 1, 0.36, 1] as const;
 
 /**
- * Anchor for a project, wherever it's showing: the full-screen reel on phones, the stacking card elsewhere.
+ * Where a project lives on screen: the coverflow on phones, the stacking card elsewhere.
  * Used by the hero pills and the gallery so a tap always lands on the visible one.
+ * On phones `after` also brings that card to the centre of the carousel.
  */
-export function caseTarget(id: string): { selector: string; offset: number } {
-  const reel = typeof document !== 'undefined' ? document.getElementById(`reel-${id}`) : null;
-  return reel && reel.offsetParent !== null ? { selector: `#reel-${id}`, offset: 0 } : { selector: `#case-${id}`, offset: -24 };
+export function caseTarget(id: string): { selector: string; offset: number; after?: () => void } {
+  const card = typeof document !== 'undefined' ? document.getElementById(`cf-${id}`) : null;
+  const rail = card?.parentElement;
+  if (card && rail && card.offsetParent !== null)
+    return {
+      selector: '#work-carousel',
+      offset: -110,
+      after: () => rail.scrollTo({ left: card.offsetLeft - (rail.clientWidth - card.offsetWidth) / 2, behavior: 'smooth' }),
+    };
+  return { selector: `#case-${id}`, offset: -24 };
 }
 
 export function Work({ projects: raw }: { projects: PublicProject[] }) {
@@ -50,8 +57,8 @@ export function Work({ projects: raw }: { projects: PublicProject[] }) {
         </div>
       ) : (
         <>
-        {/* Phones: full-screen reels */}
-        <Reels projects={projects} />
+        {/* Phones: coverflow carousel */}
+        <Coverflow projects={projects} />
         {/* Tablets and computers: stacking cards */}
         <div ref={stackRef} className="relative mx-auto hidden max-w-7xl md:block">
           {projects.map((p, i) => (
@@ -72,173 +79,164 @@ export function Work({ projects: raw }: { projects: PublicProject[] }) {
   );
 }
 
-/* ---------------- Phones: full-screen reels ---------------- */
+/* ---------------- Phones: coverflow carousel ---------------- */
 
-/**
- * Snap assist. CSS snapping is kept gentle so the rest of the page scrolls freely, which means a swipe can stop
- * halfway between two reels. When scrolling settles inside the reels, glide to whichever reel fills more of the screen.
- */
-function useReelSnap(wrap: React.RefObject<HTMLDivElement>, lenis: ReturnType<typeof useLenis>) {
+/** Swipe sideways: the centre card faces you, neighbours tilt back in 3D. Dots and a counter show where you are. */
+function Coverflow({ projects }: { projects: PublicProject[] }) {
+  const rail = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  const reduced = useReducedMotion();
+  const { t } = useI18n();
+
   useEffect(() => {
-    const el = wrap.current;
+    const el = rail.current;
     if (!el) return;
-    let touching = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const settle = () => {
-      if (touching || el.offsetParent === null) return;
-      const vh = window.innerHeight;
-      const box = el.getBoundingClientRect();
-      if (box.top > 1 || box.bottom < vh - 1) return; // not inside the reels: leave the page alone
-      const reels = [...el.children] as HTMLElement[];
-      const nearest = reels.reduce((best, r) => (Math.abs(r.getBoundingClientRect().top) < Math.abs(best.getBoundingClientRect().top) ? r : best));
-      const off = nearest.getBoundingClientRect().top;
-      if (Math.abs(off) < 2) return;
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (lenis) lenis.scrollTo(nearest, { duration: reduce ? 0 : 0.6, immediate: reduce });
-      else window.scrollBy({ top: off, behavior: reduce ? 'auto' : 'smooth' });
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const mid = el.scrollLeft + el.clientWidth / 2;
+      let best = 0;
+      let bestD = Infinity;
+      [...el.children].forEach((child, i) => {
+        const c = child as HTMLElement;
+        const d = (c.offsetLeft + c.offsetWidth / 2 - mid) / el.clientWidth; // -1…1 from centre
+        if (Math.abs(d) < bestD) {
+          bestD = Math.abs(d);
+          best = i;
+        }
+        if (reduced) return;
+        const a = Math.min(1, Math.abs(d));
+        c.style.transform = `rotateY(${Math.max(-40, Math.min(40, -d * 60))}deg) scale(${1 - a * 0.14})`;
+        c.style.opacity = String(1 - a * 0.45);
+      });
+      setActive(best);
     };
     const onScroll = () => {
-      clearTimeout(timer);
-      timer = setTimeout(settle, 140);
+      if (!frame) frame = requestAnimationFrame(update);
     };
-    const down = () => (touching = true);
-    const up = () => {
-      touching = false;
-      onScroll();
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('touchstart', down, { passive: true });
-    window.addEventListener('touchend', up, { passive: true });
-    window.addEventListener('touchcancel', up, { passive: true });
+    update();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('touchstart', down);
-      window.removeEventListener('touchend', up);
-      window.removeEventListener('touchcancel', up);
+      cancelAnimationFrame(frame);
+      el.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
-  }, [wrap, lenis]);
-}
+  }, [reduced, projects.length]);
 
-function Reels({ projects }: { projects: PublicProject[] }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const lenis = useLenis();
-  useReelSnap(wrap, lenis);
+  const go = (i: number) => {
+    const el = rail.current;
+    const card = el?.children[i] as HTMLElement | undefined;
+    if (el && card) el.scrollTo({ left: card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2, behavior: reduced ? 'auto' : 'smooth' });
+  };
+
   return (
-    <div ref={wrap} className="-mx-3 sm:-mx-5 md:hidden">
-      {projects.map((p, i) => (
-        <Reel key={p.id} project={p} index={i} total={projects.length} />
-      ))}
-    </div>
+    <motion.div
+      id="work-carousel"
+      className="-mx-3 sm:-mx-5 md:hidden"
+      initial={{ opacity: 0, x: 60 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: '-10%' }}
+      transition={{ duration: 0.9, ease }}
+    >
+      <div
+        ref={rail}
+        className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain px-[17vw] pb-6 pt-2 [perspective:900px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-roledescription="carousel"
+      >
+        {projects.map((p, i) => (
+          <CoverCard key={p.id} project={p} index={i} total={projects.length} />
+        ))}
+      </div>
+      {projects.length > 1 && (
+        <div className="mt-1 flex items-center justify-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {projects.map((p, i) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => go(i)}
+                aria-label={p.name}
+                aria-current={i === active}
+                className={cn('h-2 rounded-full transition-all duration-300', i === active ? 'w-6 bg-accent' : 'w-2 bg-line')}
+              />
+            ))}
+          </div>
+          <span className="text-xs font-bold tabular-nums text-muted">
+            {String(active + 1).padStart(2, '0')} / {String(projects.length).padStart(2, '0')}
+          </span>
+        </div>
+      )}
+      {projects.length > 1 && <p className="mt-3 text-center text-xs font-semibold text-subtle">{t.work.swipe}</p>}
+    </motion.div>
   );
 }
 
-/** One project, full screen: image zooms in, story bars fill, text slides up. Snaps into place as you swipe. */
-function Reel({ project: p, index, total }: { project: PublicProject; index: number; total: number }) {
-  const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref, { amount: 0.6 });
-  const reduced = useReducedMotion();
+function CoverCard({ project: p, index, total }: { project: PublicProject; index: number; total: number }) {
   const { t, fmt } = useI18n();
   const [failed, setFailed] = useState(false);
   const img = failed ? '' : p.coverImage || p.gallery[0];
-  const show = inView || !!reduced;
-  const rise = (k: number) => ({
-    initial: false as const,
-    animate: show ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 },
-    transition: { duration: reduced ? 0 : 0.7, ease, delay: show && !reduced ? 0.15 + k * 0.08 : 0 },
-  });
-
   return (
-    <section ref={ref} id={`reel-${p.id}`} aria-label={p.name} className="relative h-[100svh] snap-start snap-always overflow-hidden bg-surface">
-      {/* Full-bleed image, zooming in as the reel arrives */}
-      <motion.div className="absolute inset-0" initial={false} animate={{ scale: show ? 1 : 1.18 }} transition={{ duration: reduced ? 0 : 1.6, ease }}>
+    <article
+      id={`cf-${p.id}`}
+      aria-roledescription="slide"
+      aria-label={`${index + 1} / ${total}: ${p.name}`}
+      className="relative flex w-[66vw] max-w-[360px] shrink-0 snap-center flex-col overflow-hidden rounded-[24px] border border-line bg-surface shadow-[0_30px_60px_-30px_rgb(0_0_0/0.6)] [transform-style:preserve-3d] [will-change:transform]"
+    >
+      <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
         {img ? (
           img.startsWith('https://') ? (
-            <Image src={img} alt="" fill sizes="100vw" className="object-cover" priority={index === 0} onError={() => setFailed(true)} />
+            <Image src={img} alt="" fill sizes="82vw" className="object-cover" onError={() => setFailed(true)} />
           ) : (
             <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} />
           )
         ) : (
           <MockFrame project={p} />
         )}
-      </motion.div>
-      {/* Keeps text readable over any image, in light and dark mode */}
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-bg via-bg/80 via-45% to-transparent" />
-      <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-bg/70 to-transparent" />
-
-      {/* Story progress bars */}
-      <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top,0px)+14px)] flex items-center gap-1.5" aria-hidden>
-        {Array.from({ length: total }, (_, k) => (
-          <span key={k} className="h-[3px] flex-1 overflow-hidden rounded-full bg-heading/20">
-            <motion.span
-              className="block h-full origin-left rounded-full bg-heading"
-              initial={false}
-              animate={{ scaleX: k < index ? 1 : k === index && show ? 1 : 0 }}
-              transition={{ duration: k === index && !reduced ? 0.9 : 0, ease: 'linear', delay: k === index ? 0.2 : 0 }}
-            />
-          </span>
-        ))}
-        <span className="ml-2 text-xs font-bold tabular-nums text-heading">
-          {String(index + 1).padStart(2, '0')}/{String(total).padStart(2, '0')}
-        </span>
-      </div>
-
-      {/* Story text */}
-      <div className="absolute inset-x-0 bottom-0 px-5 pb-[calc(env(safe-area-inset-bottom,0px)+28px)]">
-        <motion.span {...rise(0)} className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3 py-1 text-xs font-semibold text-heading backdrop-blur">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          {t.status[p.status]}, {new Date(p.startDate).getUTCFullYear()}
-        </motion.span>
-        <motion.h3 {...rise(1)} className="mt-3 text-[clamp(2rem,9.5vw,2.9rem)] font-extrabold leading-[0.98] tracking-[-0.045em]">
-          {p.name}
-        </motion.h3>
-        {p.outcome && (
-          <motion.p {...rise(2)} className="mt-3 text-lg font-bold leading-snug text-accent-fg">
-            {p.outcome}
-          </motion.p>
-        )}
-        {p.summary && (
-          <motion.p {...rise(3)} className="mt-2 line-clamp-3 text-[15px] leading-relaxed text-muted">
-            {p.summary}
-          </motion.p>
-        )}
-        {p.stack.length > 0 && (
-          <motion.ul {...rise(4)} className="mt-4 flex max-h-[3.6rem] flex-wrap gap-1.5 overflow-hidden">
-            {p.stack.map((x) => (
-              <li key={x} className="rounded-full bg-surface-2/80 px-2.5 py-1 text-[11px] font-semibold text-heading backdrop-blur">
-                {x}
-              </li>
-            ))}
-          </motion.ul>
-        )}
-        <motion.div {...rise(5)} className="mt-5 flex flex-wrap items-center gap-2">
-          <CaseLink href={p.liveUrl} label={t.work.visit} primary />
-          <CaseLink href={p.previewUrl} label={t.work.preview} />
+        {/* Preview and source code as round glass buttons on the image */}
+        <div className="absolute right-2.5 top-2.5 flex gap-1.5">
+          {p.liveUrl && p.previewUrl && (
+            <a href={p.previewUrl} target="_blank" rel="noreferrer" aria-label={t.work.preview} title={t.work.preview} className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-black/45 text-white backdrop-blur-md">
+              <Eye className="h-4 w-4" />
+            </a>
+          )}
           {p.repoUrl && (
-            <a
-              href={p.repoUrl}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={fmt(t.work.source, { name: p.name })}
-              className="grid h-11 w-11 place-items-center rounded-full border border-line bg-surface/60 text-heading backdrop-blur"
-            >
+            <a href={p.repoUrl} target="_blank" rel="noreferrer" aria-label={fmt(t.work.source, { name: p.name })} title={fmt(t.work.source, { name: p.name })} className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-black/45 text-white backdrop-blur-md">
               <Github className="h-4 w-4" />
             </a>
           )}
-        </motion.div>
-        {index === 0 && total > 1 && (
-          <motion.p
-            aria-hidden
-            initial={false}
-            animate={show ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ delay: reduced ? 0 : 1.2, duration: 0.6 }}
-            className="mt-5 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted"
-          >
-            <ChevronUp className="h-4 w-4 animate-bounce" /> {t.work.swipe}
-          </motion.p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-line px-2.5 py-1 font-semibold text-heading">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+            <span className="truncate">{t.status[p.status]}, {new Date(p.startDate).getUTCFullYear()}</span>
+          </span>
+          <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-subtle">
+            {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
+          </span>
+        </div>
+        <h3 className="mt-3 line-clamp-2 text-[clamp(1.4rem,6.4vw,1.9rem)] font-extrabold leading-[1] tracking-[-0.045em]">{p.name}</h3>
+        {p.outcome && <p className="mt-2 line-clamp-3 text-[15px] font-bold leading-snug text-accent-fg">{p.outcome}</p>}
+        {p.summary && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{p.summary}</p>}
+        {p.stack.length > 0 && (
+          <ul className="mt-3 flex max-h-[1.7rem] flex-wrap gap-1.5 overflow-hidden">
+            {p.stack.map((x) => (
+              <li key={x} className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-heading">
+                {x}
+              </li>
+            ))}
+          </ul>
+        )}
+        {/* The main button gets the full width, so its label fits in every language */}
+        {(p.liveUrl || p.previewUrl) && (
+          <div className="mt-auto pt-4">
+            <CaseLink href={p.liveUrl || p.previewUrl} label={p.liveUrl ? t.work.visit : t.work.preview} primary compact className="w-full justify-center" />
+          </div>
         )}
       </div>
-    </section>
+    </article>
   );
 }
 
@@ -433,7 +431,7 @@ function MockFrame({ project: p }: { project: PublicProject }) {
   );
 }
 
-function CaseLink({ href, label, primary }: { href: string; label: string; primary?: boolean }) {
+function CaseLink({ href, label, primary, compact, className }: { href: string; label: string; primary?: boolean; compact?: boolean; className?: string }) {
   if (!href) return null;
   return (
     <a
@@ -441,12 +439,14 @@ function CaseLink({ href, label, primary }: { href: string; label: string; prima
       target="_blank"
       rel="noreferrer"
       className={cn(
-        'group/link inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition-all',
+        'group/link inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-bold transition-all',
+        compact ? 'h-10 px-4 text-[13px]' : 'h-11 gap-2 px-5 text-sm',
         primary ? 'bg-heading text-bg hover:bg-accent hover:text-accent-ink' : 'border border-line text-heading hover:border-heading',
+        className,
       )}
     >
-      {label}
-      <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5" />
+      <span className="min-w-0 truncate">{label}</span>
+      <ArrowUpRight className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5" />
     </a>
   );
 }

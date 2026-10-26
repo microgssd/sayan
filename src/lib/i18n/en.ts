@@ -16,7 +16,7 @@ export const en = {
   },
   numbers: { title: 'By the numbers', years: 'years building products', projects: 'projects delivered', clients: 'happy clients' },
   work: {
-    swipe: 'Swipe up for the next project',
+    swipe: 'Swipe for more projects',
     title: 'Selected work',
     countOne: '1 product built end to end and running in production.',
     countMany: '{n} products built end to end and running in production.',

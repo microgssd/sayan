@@ -105,6 +105,7 @@ function Tile({ shot, hidden, label }: { shot: Shot; hidden: boolean; label: (na
             e.preventDefault();
             const c = caseTarget(shot.projectId!);
             lenis.scrollTo(c.selector, { offset: c.offset, duration: 1.4 });
+            c.after?.();
           }}
           className={cls}
         >

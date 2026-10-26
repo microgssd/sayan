@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { PublicProject } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useI18n } from '../i18n';
+import { caseTarget } from './work';
 
 type Shot = { src: string; title: string; projectId: string | null };
 
@@ -102,7 +103,8 @@ function Tile({ shot, hidden, label }: { shot: Shot; hidden: boolean; label: (na
           onClick={(e) => {
             if (!lenis) return;
             e.preventDefault();
-            lenis.scrollTo(`#case-${shot.projectId}`, { offset: -24, duration: 1.4 });
+            const c = caseTarget(shot.projectId!);
+            lenis.scrollTo(c.selector, { offset: c.offset, duration: 1.4 });
           }}
           className={cls}
         >

@@ -1,0 +1,20 @@
+import { cn } from '@/lib/utils';
+
+/** Your S spark mark, the same artwork as the favicon, so the logo matches the browser tab. */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={cn('shrink-0', className)} aria-hidden>
+      <rect width="32" height="32" rx="9" fill="#0B0B14" />
+      <path
+        transform="translate(-2 1)"
+        d="M21.2 11c-1-1.7-2.8-2.7-5-2.7-3 0-5.1 1.6-5.1 3.9 0 2.4 2 3.4 5.1 4.1 3.2.7 5.3 1.8 5.3 4.4 0 2.5-2.3 4.2-5.4 4.2-2.5 0-4.5-1.1-5.5-3"
+        fill="none"
+        stroke="#F1F5F9"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M24.5 4.5c.3 2.6 2.2 4.5 4.8 4.8-2.6.3-4.5 2.2-4.8 4.8-.3-2.6-2.2-4.5-4.8-4.8 2.6-.3 4.5-2.2 4.8-4.8Z" fill="#A855F7" />
+    </svg>
+  );
+}
